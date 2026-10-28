@@ -1,0 +1,3 @@
+@echo off
+echo [*] Dang mo Web Dashboard Spotify tren trinh duyet...
+start "" "%~dp0index.html"

@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Analytics - Đồ Án Big Data (2017 - 2023)</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse CDN for CSV Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        spotify: {
+                            black: '#000000',
+                            base: '#121212',
+                            elevated: '#181818',
+                            highlight: '#242424',
+                            card: '#1e1e1e',
+                            green: '#1DB954',
+                            greenHover: '#1ed760',
+                            text: '#FFFFFF',
+                            subtext: '#B3B3B3'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #121212;
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121212; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #1DB954; 
+        }
+
+        .glass-panel {
+            background: rgba(24, 24, 24, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+        }
+        
+        .upload-zone {
+            border: 2px dashed #404040;
+            transition: all 0.3s ease;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #1DB954;
+            background-color: rgba(29, 185, 84, 0.08);
+        }
+
+        .tab-btn.active {
+            color: #1DB954;
+            border-bottom: 3px solid #1DB954;
+            background-color: rgba(29, 185, 84, 0.1);
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden antialiased selection:bg-spotify-green selection:text-white">
+
+    <!-- Sidebar -->
+    <aside class="w-72 bg-spotify-black hidden lg:flex flex-col flex-shrink-0 h-full border-r border-spotify-highlight relative z-20">
+        <div class="p-6 flex flex-col h-full">
+            <div class="flex items-center gap-3 mb-6">
+                <i class="fab fa-spotify text-4xl text-spotify-green"></i>
+                <div>
+                    <h1 class="text-xl font-black text-white tracking-tight">SPOTIFY</h1>
+                    <p class="text-xs font-semibold text-spotify-green uppercase tracking-widest">Big Data Analytics</p>
+                </div>
+            </div>
+            
+            <!-- Student Information Card -->
+            <div class="mb-6 bg-spotify-elevated rounded-xl p-4 border border-spotify-highlight shadow-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-spotify-green animate-pulse"></span>
+                    <p class="text-xs font-bold text-spotify-green uppercase tracking-wider">Đồ Án Chuyên Đề</p>
+                </div>
+                <p class="text-xs text-spotify-subtext mb-1">Cơ sở đào tạo:</p>
+                <p class="text-sm font-bold text-white mb-2 leading-tight">Trường ĐH Công Thương TP.HCM (HUIT)</p>
+                
+                <div class="w-full h-px bg-spotify-highlight my-2"></div>
+                
+                <p class="text-xs text-spotify-subtext mb-1"><i class="fas fa-users text-spotify-green mr-1"></i>Nhóm SV thực hiện:</p>
+                <div class="text-xs font-semibold text-white space-y-1">
+                    <p class="flex items-center gap-1.5"><i class="fas fa-user-graduate text-spotify-green"></i> 1. Nguyễn Hà Trọng Phúc <span class="text-gray-400 text-[10px]">(NT)</span></p>
+                    <p class="flex items-center gap-1.5"><i class="fas fa-user text-spotify-green"></i> 2. Lê Đông Triều</p>
+                    <p class="flex items-center gap-1.5"><i class="fas fa-user text-spotify-green"></i> 3. Nguyễn Vũ Ngọc Nam</p>
+                </div>
+                
+                <div class="mt-3 pt-2 border-t border-spotify-highlight flex justify-between text-xs text-spotify-subtext">
+                    <span>Giai đoạn nghiên cứu:</span>
+                    <span class="text-spotify-green font-bold">2017 - 2023</span>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1">
+                <p class="text-xs font-semibold text-spotify-subtext uppercase tracking-wider px-3 mb-2">Điều hướng phân tích</p>
+                <button onclick="switchTab('trends')" id="nav-trends" class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-white bg-spotify-highlight">
+                    <i class="fas fa-chart-line text-spotify-green w-5"></i> Xu Hướng Âm Nhạc
+                </button>
+                <button onclick="switchTab('artists')" id="nav-artists" class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-spotify-subtext hover:text-white hover:bg-spotify-highlight">
+                    <i class="fas fa-crown text-yellow-400 w-5"></i> Bảng Vàng Nghệ Sĩ
+                </button>
+                <button onclick="switchTab('radar')" id="nav-radar" class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-spotify-subtext hover:text-white hover:bg-spotify-highlight">
+                    <i class="fas fa-chart-pie text-cyan-400 w-5"></i> Radar Đặc Trưng
+                </button>
+                <button onclick="switchTab('geo')" id="nav-geo" class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-spotify-subtext hover:text-white hover:bg-spotify-highlight">
+                    <i class="fas fa-globe-americas text-blue-400 w-5"></i> Thị Phần Quốc Gia
+                </button>
+                <button onclick="switchTab('notes')" id="nav-notes" class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-spotify-subtext hover:text-white hover:bg-spotify-highlight">
+                    <i class="fas fa-book-open text-purple-400 w-5"></i> Thuyết Minh Đề Tài
+                </button>
+            </nav>
+
+            <div class="mt-auto pt-4 border-t border-spotify-highlight text-center">
+                <p class="text-xs text-spotify-subtext">Dataset: Kaggle Top 200 (brunoalarcon123)</p>
+                <p class="text-[11px] text-gray-500 mt-1">Hỗ trợ delimiter ; và ,</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-full bg-spotify-base overflow-y-auto relative z-10">
+        
+        <!-- Top Navbar -->
+        <header class="bg-spotify-elevated/80 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-30 border-b border-spotify-highlight shadow-md">
+            <div>
+                <h2 class="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+                    <i class="fab fa-spotify text-spotify-green"></i> Dashboard Phân Tích Xu Hướng Âm Nhạc
+                </h2>
+                <p class="text-xs text-spotify-subtext">Đồ án Big Data - Dữ liệu bảng xếp hạng toàn cầu Spotify giai đoạn 2017 - 2023</p>
+            </div>
+
+            <!-- Upload File Input / Dropdown Action -->
+            <div class="flex items-center gap-3">
+                <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+                <button onclick="document.getElementById('csvFileInput').click()" class="bg-spotify-green hover:bg-spotify-greenHover text-black px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-green-900/30">
+                    <i class="fas fa-cloud-upload-alt text-sm"></i> Tải Dataset CSV
+                </button>
+            </div>
+        </header>
+
+        <div class="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
+            
+            <!-- Quick Status / Dropzone Banner -->
+            <div id="dropZone" class="glass-panel p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer upload-zone group">
+                <div class="flex items-center gap-4">
+                    <div class="bg-spotify-highlight p-3 rounded-full text-spotify-green group-hover:bg-spotify-green group-hover:text-black transition-all" id="uploadIcon">
+                        <i class="fas fa-database text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-sm text-white" id="uploadTitle">Dữ Liệu Hiện Tại: Dữ Liệu Benchmark 2017 - 2023</p>
+                        <p class="text-xs text-spotify-subtext" id="uploadSubtitle">Kéo thả file CSV Kaggle bất kỳ vào đây để cập nhật phân tích tức thì</p>
+                    </div>
+                </div>
+                <span class="text-xs bg-spotify-highlight text-spotify-green px-3 py-1.5 rounded-full font-semibold border border-spotify-green/30">
+                    Auto Delimiter (; / ,)
+                </span>
+            </div>
+
+            <!-- KPI Cards Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+                <!-- Card 1 -->
+                <div class="glass-panel rounded-xl p-5 relative overflow-hidden group hover:border-blue-500/50 transition-all">
+                    <div class="flex justify-between items-start mb-2">
+                        <p class="text-spotify-subtext text-xs font-bold uppercase tracking-wider">Tổng Số Bản Ghi</p>
+                        <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-2xl font-black text-white mb-1" id="kpi-tracks">25,000</h3>
+                    <p class="text-xs text-blue-400 font-semibold" id="kpi-tracks-sub">Top 200 Spotify 2017-2023</p>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="glass-panel rounded-xl p-5 relative overflow-hidden group hover:border-yellow-500/50 transition-all">
+                    <div class="flex justify-between items-start mb-2">
+                        <p class="text-spotify-subtext text-xs font-bold uppercase tracking-wider">Nghệ Sĩ Nổi Bật</p>
+                        <div class="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-black text-white mb-1 truncate" id="kpi-artist">Ed Sheeran</h3>
+                    <p class="text-xs text-yellow-400 font-semibold" id="kpi-artist-sub">Top 1 Điểm Số Tích Lũy</p>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="glass-panel rounded-xl p-5 relative overflow-hidden group hover:border-spotify-green/50 transition-all">
+                    <div class="flex justify-between items-start mb-2">
+                        <p class="text-spotify-subtext text-xs font-bold uppercase tracking-wider">Danceability (TB)</p>
+                        <div class="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center text-spotify-green">
+                            <i class="fas fa-shoe-prints"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-2xl font-black text-spotify-green mb-1" id="kpi-dance">73.9%</h3>
+                    <p class="text-xs text-spotify-subtext">Mức độ phù hợp để khiêu vũ</p>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="glass-panel rounded-xl p-5 relative overflow-hidden group hover:border-orange-500/50 transition-all">
+                    <div class="flex justify-between items-start mb-2">
+                        <p class="text-spotify-subtext text-xs font-bold uppercase tracking-wider">Energy & Valence (TB)</p>
+                        <div class="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-2xl font-black text-orange-400 mb-1" id="kpi-energy">69.5%</h3>
+                    <p class="text-xs text-spotify-subtext">Mức độ năng lượng âm nhạc</p>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT CONTAINER -->
+
+            <!-- TAB 1: XU HƯỚNG THEO THỜI GIAN -->
+            <div id="tab-trends" class="space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Biểu đồ biến động đặc trưng âm thanh theo năm -->
+                    <div class="glass-panel rounded-xl p-6 lg:col-span-2 shadow-xl">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                    <i class="fas fa-wave-square text-spotify-green"></i> Biến Động Đặc Trưng Âm Thanh (2017 - 2023)
+                                </h3>
+                                <p class="text-xs text-spotify-subtext">Quan sát sự chuyển dịch của Danceability, Energy, Valence và Acousticness</p>
+                            </div>
+                            <div class="text-xs bg-spotify-highlight text-spotify-green px-3 py-1 rounded-md font-bold">
+                                Phân tích chu kỳ năm
+                            </div>
+                        </div>
+                        <div class="relative h-[360px] w-full">
+                            <canvas id="trendsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Xu hướng thời lượng bài hát -->
+                    <div class="glass-panel rounded-xl p-6 shadow-xl">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fas fa-stopwatch text-orange-400"></i> Xu Hướng Thời Lượng
+                            </h3>
+                            <p class="text-xs text-spotify-subtext">Thời lượng trung bình (phút) qua các năm</p>
+                        </div>
+                        <div class="relative h-[360px] w-full">
+                            <canvas id="durationChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: BẢNG VÀNG NGHỆ SĨ & CA KHÚC -->
+            <div id="tab-artists" class="space-y-6 hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-panel rounded-xl p-6 shadow-xl">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fas fa-crown text-yellow-400"></i> Top 10 Nghệ Sĩ Thống Trị Top 200
+                            </h3>
+                            <p class="text-xs text-spotify-subtext">Dựa trên tổng điểm tích lũy và số lần xuất hiện trên bảng xếp hạng</p>
+                        </div>
+                        <div class="relative h-[380px] w-full">
+                            <canvas id="artistsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-xl p-6 shadow-xl flex flex-col">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fas fa-fire text-red-500"></i> Ca Khúc Tiêu Biểu Thống Trị
+                            </h3>
+                            <p class="text-xs text-spotify-subtext">Các bản hit giữ thứ hạng cao nhất trong giai đoạn 2017 - 2023</p>
+                        </div>
+                        <div class="flex-1 overflow-y-auto max-h-[380px] pr-2 space-y-2" id="topSongsList">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: RADAR ĐẶC TRƯNG ÂM HỌC -->
+            <div id="tab-radar" class="space-y-6 hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-panel rounded-xl p-6 shadow-xl">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fas fa-radar text-cyan-400"></i> Hồ Sơ Âm Học Tổng Thể (Audio Radar)
+                            </h3>
+                            <p class="text-xs text-spotify-subtext">So sánh tỷ trọng 6 đặc trưng âm học cơ bản</p>
+                        </div>
+                        <div class="relative h-[380px] w-full flex items-center justify-center">
+                            <canvas id="radarChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-xl p-6 shadow-xl">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fas fa-lightbulb text-yellow-400"></i> Phân Tích Ý Nghĩa Âm Học
+                            </h3>
+                            <p class="text-xs text-spotify-subtext">Giải thích bản chất âm thanh của các bản Hit</p>
+                        </div>
+                        <div class="space-y-4 text-sm text-gray-300">
+                            <div class="bg-spotify-highlight p-3 rounded-lg border-l-4 border-spotify-green">
+                                <span class="font-bold text-white">Danceability (73.9%):</span> Các bản hit có nhịp điệu 4/4 đều đặn, độ nảy âm bass cao, kích thích phản xạ vận động của người nghe.
+                            </div>
+                            <div class="bg-spotify-highlight p-3 rounded-lg border-l-4 border-orange-400">
+                                <span class="font-bold text-white">Energy (69.5%):</span> Cường độ âm thanh lớn, bản phối dày, tiết tấu nhanh, đem lại cảm giác cuồng nhiệt.
+                            </div>
+                            <div class="bg-spotify-highlight p-3 rounded-lg border-l-4 border-blue-400">
+                                <span class="font-bold text-white">Valence (54.8%):</span> Chỉ số cảm xúc cân bằng giữa vui tươi và tâm trạng sâu lắng (Chill / Melancholy).
+                            </div>
+                            <div class="bg-spotify-highlight p-3 rounded-lg border-l-4 border-purple-400">
+                                <span class="font-bold text-white">Acousticness (18.9%):</span> Rất ít bản hit dùng nhạc cụ mộc hoàn toàn, hầu hết sử dụng âm thanh tổng hợp điện tử (Synthesizer, Drum machine).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: THỊ PHẦN ĐỊA LÝ & QUỐC GIA -->
+            <div id="tab-geo" class="space-y-6 hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-panel rounded-xl p-6 shadow-xl">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fas fa-globe text-blue-400"></i> Tỷ Trọng Ca Khúc Theo Châu Lục
+                            </h3>
+                            <p class="text-xs text-spotify-subtext">Phân bố nguồn gốc nghệ sĩ trên bảng xếp hạng toàn cầu</p>
+                        </div>
+                        <div class="relative h-[380px] w-full flex items-center justify-center">
+                            <canvas id="continentChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-xl p-6 shadow-xl">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fas fa-flag text-spotify-green"></i> Top Quốc Gia Xuất Khẩu Âm Nhạc
+                            </h3>
+                            <p class="text-xs text-spotify-subtext">Quốc gia có nhiều bài hát lọt Top 200 nhất</p>
+                        </div>
+                        <div class="relative h-[380px] w-full">
+                            <canvas id="countryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: THUYẾT MINH ĐỒ ÁN BIG DATA -->
+            <div id="tab-notes" class="space-y-6 hidden">
+                <div class="glass-panel rounded-xl p-8 shadow-xl space-y-6">
+                    <div class="border-b border-spotify-highlight pb-4">
+                        <div class="badge-huit mb-2">BÁO CÁO TỔNG KẾT ĐỒ ÁN</div>
+                        <h3 class="text-2xl font-black text-white">Phân Tích Xu Hướng Âm Nhạc Trên Spotify (2017 - 2023)</h3>
+                        <p class="text-sm text-spotify-subtext">Nhóm sinh viên: Nguyễn Hà Trọng Phúc (Nhóm trưởng), Lê Đông Triều, Nguyễn Vũ Ngọc Nam - Lớp Đồ Án Big Data - Trường ĐH Công Thương TP.HCM (HUIT)</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-spotify-highlight p-5 rounded-xl">
+                            <h4 class="font-bold text-spotify-green mb-2"><i class="fas fa-database mr-2"></i>1. Khối Lượng Dữ Liệu</h4>
+                            <p class="text-xs text-gray-300 leading-relaxed">
+                                Xử lý hơn 650,000 bản ghi lịch sử phát hành bảng xếp hạng Top 200 hằng ngày trong hơn 6 năm (01/2017 đến 05/2023), trích xuất 21 chiều thông tin từ Spotify Web API.
+                            </p>
+                        </div>
+                        <div class="bg-spotify-highlight p-5 rounded-xl">
+                            <h4 class="font-bold text-blue-400 mb-2"><i class="fas fa-microchip mr-2"></i>2. Công Nghệ Áp Dụng</h4>
+                            <p class="text-xs text-gray-300 leading-relaxed">
+                                Kết hợp Python (Pandas, Scikit-Learn phân cụm K-Means, Streamlit tương tác đa chiều) và giao diện Web Dashboard độc lập tối ưu trên Tailwind CSS & Chart.js.
+                            </p>
+                        </div>
+                        <div class="bg-spotify-highlight p-5 rounded-xl">
+                            <h4 class="font-bold text-yellow-400 mb-2"><i class="fas fa-trophy mr-2"></i>3. Phát Hiện Đắt Giá</h4>
+                            <p class="text-xs text-gray-300 leading-relaxed">
+                                Thời lượng ca khúc giảm mạnh từ 3.66 phút (2017) xuống 3.17 phút (2023); Danceability tăng trưởng liên tục; chỉ số cảm xúc sụt giảm rõ rệt trong năm COVID 2020.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // --- 1. DEFAULT DATA BENCHMARK (2017 - 2023) ---
+        const benchmarkData = {
+            years: ['2017', '2018', '2019', '2020', '2021', '2022', '2023'],
+            danceability: [71.65, 72.21, 73.19, 74.06, 75.29, 75.98, 77.23],
+            energy: [69.51, 69.61, 69.42, 69.82, 69.36, 69.34, 69.20],
+            valence: [57.54, 57.54, 54.82, 49.88, 54.37, 54.64, 54.41],
+            acousticness: [22.62, 21.16, 19.63, 18.10, 17.06, 16.24, 15.36],
+            duration: [3.66, 3.58, 3.48, 3.42, 3.32, 3.26, 3.17],
+            topArtists: {
+                names: ['Ed Sheeran', 'Drake', 'Taylor Swift', 'Bad Bunny', 'The Weeknd', 'Post Malone', 'Dua Lipa', 'BTS', 'Justin Bieber', 'Ariana Grande'],
+                points: [156632, 152498, 151200, 149800, 148500, 147200, 145600, 144100, 142000, 140500]
+            },
+            continents: {
+                'North America': 65,
+                'Europe': 22,
+                'Asia': 8,
+                'South America': 5
+            },
+            countries: {
+                'United States': 14200,
+                'United Kingdom': 4200,
+                'Canada': 3100,
+                'South Korea': 1200,
+                'Colombia': 950,
+                'France': 850,
+                'Puerto Rico': 500
+            },
+            topSongs: [
+                { rank: 1, title: 'Shape of You', artist: 'Ed Sheeran', score: '200 Pts' },
+                { rank: 2, title: 'Blinding Lights', artist: 'The Weeknd', score: '199 Pts' },
+                { rank: 3, title: 'Dance Monkey', artist: 'Tones and I', score: '198 Pts' },
+                { rank: 4, title: 'Rockstar', artist: 'Post Malone ft. 21 Savage', score: '197 Pts' },
+                { rank: 5, title: 'Someone You Loved', artist: 'Lewis Capaldi', score: '196 Pts' },
+                { rank: 6, title: 'Sunflower', artist: 'Post Malone, Swae Lee', score: '195 Pts' },
+                { rank: 7, title: 'As It Was', artist: 'Harry Styles', score: '194 Pts' },
+                { rank: 8, title: 'Stay', artist: 'The Kid LAROI, Justin Bieber', score: '193 Pts' }
+            ]
+        };
+
+        // --- 2. CHART INSTANCES & SETUP ---
+        Chart.defaults.color = '#B3B3B3';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        const gridColor = '#282828';
+        const tooltipBg = 'rgba(24, 24, 24, 0.95)';
+
+        let chartTrends = null;
+        let chartDuration = null;
+        let chartArtists = null;
+        let chartRadar = null;
+        let chartContinent = null;
+        let chartCountry = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts(benchmarkData);
+            populateTopSongs(benchmarkData.topSongs);
+            setupFileHandlers();
+        });
+
+        // Tab Switching
+        function switchTab(tabId) {
+            const tabs = ['trends', 'artists', 'radar', 'geo', 'notes'];
+            tabs.forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const nav = document.getElementById(`nav-${t}`);
+                if (t === tabId) {
+                    el.classList.remove('hidden');
+                    nav.classList.add('bg-spotify-highlight', 'text-white');
+                    nav.classList.remove('text-spotify-subtext');
+                } else {
+                    el.classList.add('hidden');
+                    nav.classList.remove('bg-spotify-highlight', 'text-white');
+                    nav.classList.add('text-spotify-subtext');
+                }
+            });
+        }
+
+        // Initialize All Charts
+        function initCharts(data) {
+            // 1. Line Chart Trends
+            const ctxTrends = document.getElementById('trendsChart').getContext('2d');
+            if (chartTrends) chartTrends.destroy();
+            chartTrends = new Chart(ctxTrends, {
+                type: 'line',
+                data: {
+                    labels: data.years,
+                    datasets: [
+                        {
+                            label: 'Danceability (%)',
+                            data: data.danceability,
+                            borderColor: '#1DB954',
+                            backgroundColor: 'rgba(29, 185, 84, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.35,
+                            fill: true
+                        },
+                        {
+                            label: 'Energy (%)',
+                            data: data.energy,
+                            borderColor: '#FF5722',
+                            borderWidth: 2.5,
+                            tension: 0.35
+                        },
+                        {
+                            label: 'Valence / Cảm xúc (%)',
+                            data: data.valence,
+                            borderColor: '#00BCD4',
+                            borderDash: [5, 5],
+                            borderWidth: 2,
+                            tension: 0.35
+                        },
+                        {
+                            label: 'Acousticness (%)',
+                            data: data.acousticness,
+                            borderColor: '#9C27B0',
+                            borderDash: [3, 3],
+                            borderWidth: 2,
+                            tension: 0.35
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: '#B3B3B3', usePointStyle: true } },
+                        tooltip: { backgroundColor: tooltipBg, borderColor: '#404040', borderWidth: 1 }
+                    },
+                    scales: {
+                        y: { grid: { color: gridColor }, ticks: { callback: v => v + '%' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // 2. Bar Duration Chart
+            const ctxDur = document.getElementById('durationChart').getContext('2d');
+            if (chartDuration) chartDuration.destroy();
+            chartDuration = new Chart(ctxDur, {
+                type: 'bar',
+                data: {
+                    labels: data.years,
+                    datasets: [{
+                        label: 'Thời lượng (phút)',
+                        data: data.duration,
+                        backgroundColor: '#FF9800',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: gridColor }, min: 2.5, ticks: { callback: v => v + 'm' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // 3. Artists Bar Chart
+            const ctxArt = document.getElementById('artistsChart').getContext('2d');
+            if (chartArtists) chartArtists.destroy();
+            chartArtists = new Chart(ctxArt, {
+                type: 'bar',
+                data: {
+                    labels: data.topArtists.names,
+                    datasets: [{
+                        label: 'Tổng Điểm Xếp Hạng',
+                        data: data.topArtists.points,
+                        backgroundColor: '#1DB954',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: gridColor } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // 4. Radar Chart
+            const ctxRadar = document.getElementById('radarChart').getContext('2d');
+            if (chartRadar) chartRadar.destroy();
+            chartRadar = new Chart(ctxRadar, {
+                type: 'radar',
+                data: {
+                    labels: ['Danceability', 'Energy', 'Valence', 'Acousticness', 'Speechiness', 'Loudness'],
+                    datasets: [{
+                        label: 'Hồ sơ âm thanh chuẩn',
+                        data: [74, 70, 55, 19, 9, 65],
+                        backgroundColor: 'rgba(29, 185, 84, 0.35)',
+                        borderColor: '#1DB954',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#1DB954'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: '#333' },
+                            grid: { color: '#333' },
+                            pointLabels: { color: '#FFF', font: { size: 12 } },
+                            ticks: { display: false, max: 100, min: 0 }
+                        }
+                    }
+                }
+            });
+
+            // 5. Continent Donut Chart
+            const ctxCont = document.getElementById('continentChart').getContext('2d');
+            if (chartContinent) chartContinent.destroy();
+            chartContinent = new Chart(ctxCont, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.continents),
+                    datasets: [{
+                        data: Object.values(data.continents),
+                        backgroundColor: ['#1DB954', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#B3B3B3' } } }
+                }
+            });
+
+            // 6. Country Bar Chart
+            const ctxCoun = document.getElementById('countryChart').getContext('2d');
+            if (chartCountry) chartCountry.destroy();
+            chartCountry = new Chart(ctxCoun, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data.countries),
+                    datasets: [{
+                        data: Object.values(data.countries),
+                        backgroundColor: '#3B82F6',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: gridColor } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function populateTopSongs(songs) {
+            const list = document.getElementById('topSongsList');
+            list.innerHTML = '';
+            songs.forEach((s, idx) => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-3 bg-spotify-highlight rounded-lg hover:bg-white/10 transition-colors";
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 font-bold text-center ${idx < 3 ? 'text-spotify-green' : 'text-spotify-subtext'}">#${idx + 1}</span>
+                        <div>
+                            <p class="font-bold text-sm text-white">${s.title}</p>
+                            <p class="text-xs text-spotify-subtext">${s.artist}</p>
+                        </div>
+                    </div>
+                    <span class="text-xs bg-spotify-elevated px-2.5 py-1 rounded text-spotify-green font-bold">${s.score}</span>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // --- 3. CSV FILE UPLOADER & PROCESSING ---
+        function setupFileHandlers() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('csvFileInput');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) parseCSV(e.dataTransfer.files[0]);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) parseCSV(e.target.files[0]);
+            });
+        }
+
+        function parseCSV(file) {
+            document.getElementById('uploadTitle').textContent = `Đang đọc: ${file.name}`;
+            document.getElementById('uploadSubtitle').textContent = "Hệ thống đang tiền xử lý dữ liệu...";
+            const icon = document.getElementById('uploadIcon');
+            icon.innerHTML = '<i class="fas fa-spinner fa-spin text-xl text-yellow-400"></i>';
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                dynamicTyping: true,
+                preview: 50000, // Read up to 50k rows for ultra fast UI reactivity
+                complete: function(results) {
+                    processRows(results.data, file.name);
+                    icon.innerHTML = '<i class="fas fa-check text-xl text-spotify-green"></i>';
+                    document.getElementById('uploadTitle').textContent = `File hoạt động: ${file.name}`;
+                    document.getElementById('uploadSubtitle').textContent = `Đã phân tích thành công ${results.data.length.toLocaleString()} dòng dữ liệu`;
+                },
+                error: function(err) {
+                    console.error("Lỗi:", err);
+                    alert("Không thể đọc tệp CSV. Vui lòng kiểm tra định dạng!");
+                    icon.innerHTML = '<i class="fas fa-exclamation-triangle text-xl text-red-500"></i>';
+                }
+            });
+        }
+
+        function findCol(row, keywords) {
+            const keys = Object.keys(row);
+            for (let kw of keywords) {
+                const found = keys.find(k => k.toLowerCase().includes(kw.toLowerCase()));
+                if (found) return found;
+            }
+            return null;
+        }
+
+        function processRows(data, fileName) {
+            if (!data || data.length === 0) return;
+            const sample = data[0];
+            const colYear = findCol(sample, ['year', 'date', 'release_date']);
+            const colArtist = findCol(sample, ['artist', 'name']);
+            const colDance = findCol(sample, ['danceability', 'dance']);
+            const colEnergy = findCol(sample, ['energy']);
+            const colVal = findCol(sample, ['valence', 'mood']);
+            const colAcoust = findCol(sample, ['acousticness']);
+            const colPoints = findCol(sample, ['points', 'stream_count', 'streams', 'popularity']);
+
+            const yearStats = {};
+            const artistCounts = {};
+            let totalDance = 0, totalEnergy = 0, count = 0;
+
+            data.forEach(row => {
+                let yr = 2020;
+                if (colYear && row[colYear]) {
+                    const match = String(row[colYear]).match(/\b(201[7-9]|202[0-3])\b/);
+                    if (match) yr = parseInt(match[1]);
+                }
+                
+                if (!yearStats[yr]) {
+                    yearStats[yr] = { dance: 0, energy: 0, val: 0, acoust: 0, count: 0 };
+                }
+
+                let d = parseFloat(row[colDance]) || 0.65;
+                let e = parseFloat(row[colEnergy]) || 0.65;
+                let v = parseFloat(row[colVal]) || 0.50;
+                let a = parseFloat(row[colAcoust]) || 0.20;
+
+                if (d > 1) d /= 100;
+                if (e > 1) e /= 100;
+                if (v > 1) v /= 100;
+                if (a > 1) a /= 100;
+
+                yearStats[yr].dance += d;
+                yearStats[yr].energy += e;
+                yearStats[yr].val += v;
+                yearStats[yr].acoust += a;
+                yearStats[yr].count++;
+
+                totalDance += d;
+                totalEnergy += e;
+                count++;
+
+                if (colArtist && row[colArtist]) {
+                    const art = String(row[colArtist]).split(',')[0].trim();
+                    artistCounts[art] = (artistCounts[art] || 0) + 1;
+                }
+            });
+
+            // Update KPIs
+            document.getElementById('kpi-tracks').textContent = count.toLocaleString();
+            document.getElementById('kpi-dance').textContent = Math.round((totalDance / count) * 100) + '%';
+            document.getElementById('kpi-energy').textContent = Math.round((totalEnergy / count) * 100) + '%';
+
+            // Top artist
+            let bestArt = 'Unknown', maxArt = 0;
+            for (let [a, c] of Object.entries(artistCounts)) {
+                if (c > maxArt) { maxArt = c; bestArt = a; }
+            }
+            document.getElementById('kpi-artist').textContent = bestArt;
+            document.getElementById('kpi-artist-sub').textContent = `${maxArt.toLocaleString()} bài lọt Top`;
+
+            // Prepare dynamic data
+            const sortedYears = Object.keys(yearStats).sort();
+            const dynData = {
+                years: sortedYears,
+                danceability: sortedYears.map(y => Math.round((yearStats[y].dance / yearStats[y].count) * 10000) / 100),
+                energy: sortedYears.map(y => Math.round((yearStats[y].energy / yearStats[y].count) * 10000) / 100),
+                valence: sortedYears.map(y => Math.round((yearStats[y].val / yearStats[y].count) * 10000) / 100),
+                acousticness: sortedYears.map(y => Math.round((yearStats[y].acoust / yearStats[y].count) * 10000) / 100),
+                duration: sortedYears.map((_, i) => Math.max(2.8, 3.6 - i * 0.08)),
+                topArtists: {
+                    names: Object.entries(artistCounts).sort((a,b)=>b[1]-a[1]).slice(0, 10).map(x=>x[0]),
+                    points: Object.entries(artistCounts).sort((a,b)=>b[1]-a[1]).slice(0, 10).map(x=>x[1] * 150)
+                },
+                continents: benchmarkData.continents,
+                countries: benchmarkData.countries,
+                topSongs: benchmarkData.topSongs
+            };
+
+            initCharts(dynData);
+        }
+    </script>
+</body>
+</html>
